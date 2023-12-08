@@ -3,6 +3,37 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
+# Функція для отримання розмірів матриць від клієнта
+def receive_matrix_sizes(client_socket):
+    matrix_sizes = client_socket.recv(1024).decode().split(',')
+    return map(int, matrix_sizes)
+
+
+# Функція для отримання матриць від клієнта
+def receive_matrices(client_socket, n, m, l):
+    matrix_a_data = client_socket.recv(n * m * 4)
+    matrix_b_data = client_socket.recv(m * l * 4)
+
+    if len(matrix_a_data) != n * m * 4 or len(matrix_b_data) != m * l * 4:
+        raise ValueError("Отримано неправильні дані матриць")
+
+    matrix_a = np.frombuffer(matrix_a_data, dtype=int).reshape(n, m)
+    matrix_b = np.frombuffer(matrix_b_data, dtype=int).reshape(m, l)
+
+    return matrix_a, matrix_b
+
+
+# Функція для множення матриць
+def multiply_matrices(matrix_a, matrix_b):
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        result_matrix = executor.submit(np.dot, matrix_a, matrix_b).result()
+    return result_matrix
+
+
+# Функція для відправлення результату клієнту
+def send_result_matrix(client_socket, result_matrix):
+    client_socket.send(result_matrix.tobytes())
+
 
 # Функція для обробки клієнта
 def handle_client(client_socket):
@@ -40,44 +71,12 @@ def handle_client(client_socket):
         print("Від сервера: З'єднання закрито")
 
 
-# Функція для отримання розмірів матриць від клієнта
-def receive_matrix_sizes(client_socket):
-    matrix_sizes = client_socket.recv(1024).decode().split(',')
-    return map(int, matrix_sizes)
-
-
-# Функція для отримання матриць від клієнта
-def receive_matrices(client_socket, n, m, l):
-    matrix_a_data = client_socket.recv(n * m * 4)
-    matrix_b_data = client_socket.recv(m * l * 4)
-
-    if len(matrix_a_data) != n * m * 4 or len(matrix_b_data) != m * l * 4:
-        raise ValueError("Отримано неправильні дані матриць")
-
-    matrix_a = np.frombuffer(matrix_a_data, dtype=int).reshape(n, m)
-    matrix_b = np.frombuffer(matrix_b_data, dtype=int).reshape(m, l)
-
-    return matrix_a, matrix_b
-
-
-# Функція для множення матриць
-def multiply_matrices(matrix_a, matrix_b):
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        result_matrix = executor.submit(np.dot, matrix_a, matrix_b).result()
-    return result_matrix
-
-
-# Функція для відправлення результату клієнту
-def send_result_matrix(client_socket, result_matrix):
-    client_socket.send(result_matrix.tobytes())
-
-
 # Функція для запуску сервера
 def start_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('0.0.0.0', 12345))
+    server.bind(('0.0.0.0', 8888))
     server.listen(5)
-    print("Сервер прослуховує порт 12345")
+    print("Сервер прослуховує порт 8888...")
 
     while True:
         client, addr = server.accept()

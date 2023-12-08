@@ -77,7 +77,7 @@ def communicate_with_server():
 # Функція для підключення до сервера
 def connect_to_server():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('127.0.0.1', 12345))
+    client.connect(('127.0.0.1', 8888))
     return client
 
 
